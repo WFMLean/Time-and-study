@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Risk Management — Time &amp; Motion Study</title>
+<style>
+  :root{
+    --bg:#080e1c; --bg2:#0c1425; --panel:#101a30; --panel2:#14203a;
+    --line:#1e2c4d; --line2:#28395f;
+    --txt:#e7edf8; --dim:#8fa0c2; --faint:#5a6b8f;
+    --red:#e14a4a; --red2:#ff6b6b;
+    --live:#2dd4a7; --amber:#f0b03f; --blue:#4f8ef7; --violet:#9b7bff;
+    --mono:'Consolas','SF Mono','JetBrains Mono',monospace;
+    --sans:'Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh}
+  body::before{content:'';position:fixed;inset:0;background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(79,142,247,.07), transparent 60%),
+    radial-gradient(900px 400px at 10% 110%, rgba(225,74,74,.05), transparent 60%);
+    pointer-events:none}
+
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line);background:rgba(12,20,37,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:50}
+  .logo{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,#12234a,#0b1530);border:1px solid var(--line2);display:grid;place-items:center;font-family:var(--mono);font-weight:700;color:var(--red2);font-size:13px;letter-spacing:.5px;flex-shrink:0}
+  .h-title{font-size:15px;font-weight:700;letter-spacing:.3px}
+  .h-sub{font-size:11px;color:var(--dim);letter-spacing:1.4px;text-transform:uppercase;margin-top:2px}
+  .h-right{margin-left:auto;text-align:right;display:flex;align-items:center;gap:16px}
+  .clock{font-family:var(--mono);font-size:15px;color:var(--txt)}
+  .clock-date{font-size:11px;color:var(--faint)}
+
+  .db{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:20px;border:1px solid var(--line2);background:var(--bg2);font-size:11.5px;color:var(--dim);cursor:default;white-space:nowrap}
+  .db i{width:8px;height:8px;border-radius:50%;background:var(--faint);flex-shrink:0}
+  .db.ok i{background:var(--live);box-shadow:0 0 8px rgba(45,212,167,.6)}
+  .db.sync i{background:var(--blue);animation:blink 1s infinite}
+  .db.off i{background:var(--amber)}
+  .db.local i{background:var(--faint)}
+  @keyframes blink{50%{opacity:.35}}
+  @media(prefers-reduced-motion:reduce){.db.sync i{animation:none}}
+
+  nav{display:flex;gap:6px;padding:10px 22px;border-bottom:1px solid var(--line);background:var(--bg2)}
+  .tab{padding:8px 16px;border-radius:8px;font-size:13px;color:var(--dim);cursor:pointer;border:1px solid transparent;user-select:none;display:flex;align-items:center;gap:7px}
+  .tab:hover{color:var(--txt);background:var(--panel)}
+  .tab.on{color:var(--txt);background:var(--panel2);border-color:var(--line2)}
+  .badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--amber);color:#1a1200;font-size:11px;font-weight:700;display:grid;place-items:center}
+  .badge.zero{background:var(--line);color:var(--faint)}
+
+  main{padding:22px;max-width:1180px;margin:0 auto}
+  .view{display:none}.view.on{display:block}
+
+  .grid{display:grid;gap:16px}
+  @media(min-width:920px){.grid-track{grid-template-columns:390px 1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card h3{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint);margin-bottom:14px;font-weight:600}
+
+  label{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin:12px 0 5px}
+  input[type=text],textarea,select{width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:10px 12px;color:var(--txt);font-size:14px;font-family:var(--sans);outline:none}
+  input[type=text]:focus,textarea:focus,select:focus{border-color:var(--blue)}
+  input.mono{font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase}
+  textarea{resize:vertical;min-height:64px;font-size:13px}
+
+  .seg{display:flex;gap:0;border:1px solid var(--line2);border-radius:9px;overflow:hidden}
+  .seg button{flex:1;padding:10px 6px;background:var(--bg2);border:none;color:var(--dim);font-size:12.5px;cursor:pointer;font-family:var(--sans)}
+  .seg button.on{background:var(--panel2);color:var(--txt);font-weight:600;box-shadow:inset 0 -2px 0 var(--blue)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:9px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:filter .15s}
+  .btn:hover{filter:brightness(1.12)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .btn-start{background:linear-gradient(135deg,#1d9e7c,#16805f);color:#eafff7;width:100%;font-size:15px;padding:14px}
+  .btn-end{background:linear-gradient(135deg,var(--red),#b83030);color:#fff}
+  .btn-ghost{background:var(--panel2);color:var(--dim);border:1px solid var(--line2)}
+  .btn-amber{background:linear-gradient(135deg,#e0a233,#c4881e);color:#241800}
+  .btn-sm{padding:7px 12px;font-size:12px;border-radius:7px}
+
+  .timer-wrap{border:1px solid var(--line2);border-radius:14px;background:
+    radial-gradient(600px 200px at 50% -40%, rgba(45,212,167,.10), transparent 70%), var(--bg2);
+    padding:26px 20px;text-align:center;position:relative;overflow:hidden}
+  .timer-wrap.idle{background:var(--bg2)}
+  .live-dot{display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--live);font-weight:700}
+  .live-dot::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--live);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(45,212,167,.5)}50%{opacity:.6;box-shadow:0 0 0 7px rgba(45,212,167,0)}}
+  @media(prefers-reduced-motion:reduce){.live-dot::before{animation:none}}
+  .timer-num{font-family:var(--mono);font-size:56px;font-weight:700;letter-spacing:2px;margin:8px 0 4px;font-variant-numeric:tabular-nums}
+  .timer-num.warn{color:var(--amber)}
+  .timer-num.over{color:var(--red2)}
+  .timer-meta{font-size:13px;color:var(--dim)}
+  .timer-meta b{color:var(--txt);font-family:var(--mono)}
+  .timer-idle-msg{color:var(--faint);font-size:13px;padding:34px 0}
+  .target-note{font-size:11px;color:var(--faint);margin-top:10px}
+  .t-actions{display:flex;gap:10px;justify-content:center;margin-top:16px}
+
+  .pend{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--line2);border-left:3px solid var(--amber);border-radius:10px;padding:11px 13px;margin-bottom:9px;flex-wrap:wrap}
+  .pend .ref{font-family:var(--mono);font-weight:700;font-size:14px}
+  .pend .meta{font-size:11.5px;color:var(--dim)}
+  .pend .wait{margin-left:auto;text-align:right;font-family:var(--mono);font-size:15px;color:var(--amber);font-weight:700}
+  .pend .wait small{display:block;font-size:9.5px;letter-spacing:1px;color:var(--faint);font-family:var(--sans);text-transform:uppercase}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .kpi .v{font-family:var(--mono);font-size:26px;font-weight:700;margin-top:6px}
+  .kpi .l{font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--faint)}
+  .kpi .s{font-size:11px;color:var(--dim);margin-top:3px}
+  .kpi.a .v{color:var(--live)} .kpi.b .v{color:var(--blue)} .kpi.c .v{color:var(--amber)} .kpi.d .v{color:var(--violet)} .kpi.e .v{color:var(--red2)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line2);font-weight:600}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:hover td{background:rgba(79,142,247,.04)}
+  td.mono{font-family:var(--mono);font-size:12.5px}
+  .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+  .pill.approved{background:rgba(45,212,167,.13);color:var(--live)}
+  .pill.dnu{background:rgba(225,74,74,.15);color:var(--red2)}
+  .pill.sent{background:rgba(240,176,63,.14);color:var(--amber)}
+  .pill.esc{background:rgba(155,123,255,.15);color:var(--violet)}
+  .pill.none{background:rgba(143,160,194,.12);color:var(--dim)}
+  .pill.vet{background:rgba(79,142,247,.13);color:var(--blue)}
+  .pill.cargo{background:rgba(155,123,255,.14);color:var(--violet)}
+  .aht-flag{color:var(--red2);font-weight:700}
+
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px}
+  .bar-row .nm{width:150px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar-track{flex:1;height:16px;background:var(--bg2);border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+  .bar-fill{height:100%;background:linear-gradient(90deg,#2456a8,var(--blue));border-radius:4px}
+  .bar-fill.over{background:linear-gradient(90deg,#a83232,var(--red))}
+  .bar-val{width:70px;text-align:right;font-family:var(--mono);font-size:12px}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+  .filters select,.filters input{width:auto;min-width:140px;padding:8px 10px;font-size:13px}
+
+  .empty{color:var(--faint);font-size:13px;text-align:center;padding:26px 0}
+
+  .overlay{position:fixed;inset:0;background:rgba(4,8,18,.72);backdrop-filter:blur(3px);display:none;place-items:center;z-index:100;padding:16px}
+  .overlay.on{display:grid}
+  .modal{background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:22px;width:100%;max-width:480px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .modal h2{font-size:16px;margin-bottom:2px}
+  .modal .msub{font-size:12px;color:var(--dim);margin-bottom:14px;font-family:var(--mono)}
+  .outcomes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
+  .outc{padding:11px 8px;border-radius:9px;border:1px solid var(--line2);background:var(--bg2);color:var(--dim);font-size:12.5px;cursor:pointer;text-align:center;font-family:var(--sans)}
+  .outc:hover{color:var(--txt)}
+  .outc.on{border-color:var(--blue);color:var(--txt);background:var(--panel2);font-weight:600}
+  .outc.on[data-o="approved"]{border-color:var(--live)}
+  .outc.on[data-o="dnu"]{border-color:var(--red)}
+  .outc.on[data-o="sent_approval"]{border-color:var(--amber)}
+  .outc.on[data-o="escalated"]{border-color:var(--violet)}
+  .m-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+  .m-timer{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--live)}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:11px 18px;font-size:13px;z-index:200;transition:transform .25s;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  .toast.on{transform:translateX(-50%) translateY(0)}
+  .footer-note{text-align:center;color:var(--faint);font-size:11px;margin-top:26px;line-height:1.7}
+  .link-danger{color:var(--red2);cursor:pointer;text-decoration:underline;font-size:12px}
+  kbd{font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--line2);border-radius:4px;padding:1px 5px;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">DRM</div>
+  <div>
+    <div class="h-title">Digital Risk Management — Time &amp; Motion Study</div>
+    <div class="h-sub">LeanGroup WFM · Offer Vetting &amp; CargoNet / BOLO</div>
+  </div>
+  <div class="h-right">
+    <div class="db local" id="dbPill" title=""><i></i><span id="dbText">Database</span></div>
+    <div>
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="clock-date" id="clockDate"></div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="tab on" data-v="track">Session Tracker</div>
+  <div class="tab" data-v="dash">Team Dashboard</div>
+  <div class="tab" data-v="log">Session Log <span class="badge zero" id="logCount">0</span></div>
+</nav>
+
+<main>
+
+<!-- ============ TRACKER ============ -->
+<section class="view on" id="v-track">
+  <div class="grid grid-track">
+    <div class="card">
+      <h3>New Session</h3>
+      <label for="agent">Agent name / ID</label>
+      <input type="text" id="agent" list="agentList" placeholder="e.g. Julian R. / Nicolle J." autocomplete="off">
+      <datalist id="agentList"></datalist>
+
+      <label>Process type</label>
+      <div class="seg" id="procSeg">
+        <button class="on" data-p="vetting">Offer Vetting</button>
+        <button data-p="cargonet">CargoNet / BOLO</button>
+      </div>
+
+      <label for="ref" id="refLabel">Reference / load number</label>
+      <input type="text" id="ref" class="mono" placeholder="e.g. M378756" autocomplete="off">
+
+      <div style="margin-top:18px">
+        <button class="btn btn-start" id="btnStart">▶&nbsp; Start Session</button>
+      </div>
+      <div class="target-note">Targets — Vetting: 20 min avg (15–25 typical) · CargoNet/BOLO: 10 min. Timer turns amber past target, red past 1.5× target.</div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <h3>Active Session</h3>
+        <div class="timer-wrap idle" id="timerWrap">
+          <div id="timerLive" style="display:none">
+            <div class="live-dot">Recording</div>
+            <div class="timer-num" id="timerNum">00:00</div>
+            <div class="timer-meta"><b id="tRef"></b> · <span id="tAgent"></span> · <span id="tProc"></span> · started <b id="tStart"></b></div>
+            <div class="t-actions">
+              <button class="btn btn-ghost" id="btnDiscard">Discard</button>
+              <button class="btn btn-end" id="btnEnd">■&nbsp; End Session</button>
+            </div>
+          </div>
+          <div class="timer-idle-msg" id="timerIdle">No active session. Enter agent + reference, then press Start.<br><span style="font-size:11px">Tip: <kbd>Enter</kbd> in the reference field starts the session.</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Pending Manager Approval <span style="text-transform:none;letter-spacing:0;color:var(--faint);font-weight:400">— team-wide · approval wait is tracked separately and excluded from vetting AHT</span></h3>
+        <div id="pendList"><div class="empty">No cases awaiting approval.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DASHBOARD ============ -->
+<section class="view" id="v-dash">
+  <div class="filters">
+    <select id="dashRange">
+      <option value="today">Today</option>
+      <option value="7">Last 7 days</option>
+      <option value="30">Last 30 days</option>
+      <option value="all" selected>All time</option>
+    </select>
+    <span style="font-size:11px;color:var(--faint)" id="liveNote">● Live — updates automatically</span>
+  </div>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid" style="grid-template-columns:1fr;gap:16px">
+    <div class="card">
+      <h3>Average Handle Time per Agent (active vetting time only)</h3>
+      <div id="agentBars"><div class="empty">No completed sessions yet.</div></div>
+    </div>
+    <div class="card">
+      <h3>Agent Summary</h3>
+      <div style="overflow-x:auto">
+      <table id="agentTable">
+        <thead><tr>
+          <th>Agent</th><th>Sessions</th><th>Vetting AHT</th><th>CargoNet AHT</th><th>Min</th><th>Max</th><th>Sent for Approval</th><th>Avg Approval Wait</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+      <div class="empty" id="agentTableEmpty">No completed sessions yet.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOG ============ -->
+<section class="view" id="v-log">
+  <div class="filters">
+    <select id="fAgent"><option value="">All agents</option></select>
+    <select id="fProc">
+      <option value="">All processes</option>
+      <option value="vetting">Offer Vetting</option>
+      <option value="cargonet">CargoNet / BOLO</option>
+    </select>
+    <select id="fOut">
+      <option value="">All outcomes</option>
+      <option value="approved">Approved</option>
+      <option value="dnu">Set DNU</option>
+      <option value="sent_approval">Sent for Approval</option>
+      <option value="escalated">Escalated / Deep-dive</option>
+      <option value="no_action">No Action Needed</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" id="btnCSV">⬇ Export CSV</button>
+    <span style="flex:1"></span>
+    <span class="link-danger" id="btnSignout">Sign out this device</span>
+  </div>
+  <div class="card" style="padding:6px 10px">
+    <div style="overflow-x:auto">
+    <table id="logTable">
+      <thead><tr>
+        <th>Date</th><th>Agent</th><th>Process</th><th>Reference</th><th>Start</th><th>End</th><th>Handle Time</th><th>Outcome</th><th>Approval Wait</th><th>Notes</th><th></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <div class="empty" id="logEmpty">No sessions recorded yet.</div>
+  </div>
+  <div class="footer-note">
+    Sessions save to the team database and sync in real time across all agents. If the connection drops, entries are held on this device and sync automatically when it returns — nothing is lost.<br>
+    Export CSV any time for offline analysis.
+  </div>
+</section>
+
+</main>
+
+<!-- ============ END-SESSION MODAL ============ -->
+<div class="overlay" id="endOverlay">
+  <div class="modal">
+    <h2>End Session</h2>
+    <div class="msub"><span id="mRef"></span> · handle time <span class="m-timer" id="mTime"></span></div>
+    <label>Outcome</label>
+    <div class="outcomes" id="outcomes">
+      <button class="outc" data-o="approved">✔ Approved</button>
+      <button class="outc" data-o="dnu">✖ Set DNU</button>
+      <button class="outc" data-o="sent_approval">⏳ Sent for Approval</button>
+      <button class="outc" data-o="escalated">↗ Escalated / Deep-dive</button>
+      <button class="outc" data-o="no_action" style="grid-column:1/-1">— No Action Needed (CargoNet: no exposure found)</button>
+    </div>
+    <label for="mNotes">Notes <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(e.g. suspicious flags, who it was sent to, delay reason)</span></label>
+    <textarea id="mNotes" placeholder="Optional"></textarea>
+    <div class="m-actions">
+      <button class="btn btn-ghost" id="mCancel">Resume</button>
+      <button class="btn btn-end" id="mSave" disabled>Save Session</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* ================================================================
+   CONFIGURATION — REQUIRED BEFORE DEPLOYING
+   Paste your Firebase web-app config object below (Firebase console
+   > Project settings > General > Your apps > Web app > SDK config).
+   The team never sees this — the UI only shows "Database".
+   ================================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAca0QWzqLMLwBeucQxkIDzzV-o_NZ3dRc",
+  authDomain: "lean-wfm.firebaseapp.com",
+  projectId: "lean-wfm",
+  storageBucket: "lean-wfm.firebasestorage.app",
+  messagingSenderId: "456300202485",
+  appId: "1:456300202485:web:95f554dca69d5662b0b8bc",
+  measurementId: "G-60HQPPJB9J"
+};
+const COLLECTION = "drm_sessions";   // Firestore collection name
+/* ================================================================ */
+
+const CONFIGURED = !/PASTE_/.test(JSON.stringify(firebaseConfig));
+
+/* ---- Firebase SDK (modular, v10) ---- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ---------- constants ---------- */
+const K_ACTIVE='drm_fb_active';
+const TARGETS={vetting:20*60, cargonet:10*60};
+const PROC_LABEL={vetting:'Offer Vetting', cargonet:'CargoNet / BOLO'};
+const OUT_LABEL={approved:'Approved', dnu:'Set DNU', sent_approval:'Sent for Approval', escalated:'Escalated', no_action:'No Action'};
+const OUT_CLASS={approved:'approved', dnu:'dnu', sent_approval:'sent', escalated:'esc', no_action:'none'};
+
+/* ---------- state ---------- */
+let sessions=[];              // live team-wide data, kept in sync by onSnapshot
+let active=load(K_ACTIVE,null);
+let tick=null, selOutcome=null, curView='track';
+let db=null, colRef=null, ready=false;
+
+function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function store(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function persistActive(){if(active)store(K_ACTIVE,active);else localStorage.removeItem(K_ACTIVE)}
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const pad=n=>String(n).padStart(2,'0');
+function fmtDur(s){s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return h?`${h}:${pad(m)}:${pad(ss)}`:`${pad(m)}:${pad(ss)}`}
+function fmtMin(s){return s==null?'—':(s/60).toFixed(1)+'m'}
+function fmtTime(ts){const d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes())}
+function fmtDate(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2600)}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+/* ---------- database status pill ---------- */
+function setDb(state,pending){
+  const p=$('#dbPill'),t=$('#dbText');
+  p.className='db '+state;
+  const q=pending?` · ${pending} queued`:'';
+  if(state==='ok'){t.textContent='Database · synced';p.title='All sessions saved to the team database'}
+  else if(state==='sync'){t.textContent='Database · syncing'+q;p.title='Saving to the team database'}
+  else if(state==='off'){t.textContent='Offline'+q;p.title='No connection — sessions are held on this device and will sync automatically'}
+  else{t.textContent='Local mode';p.title='Database not configured — data stays on this device only'}
+}
+
+/* ---------- clock ---------- */
+setInterval(()=>{const d=new Date();$('#clock').textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());$('#clockDate').textContent=d.toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric'})},500);
+
+/* ---------- tabs ---------- */
+$$('.tab').forEach(t=>t.addEventListener('click',()=>{
+  $$('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+  $$('.view').forEach(v=>v.classList.remove('on'));
+  curView=t.dataset.v;
+  $('#v-'+curView).classList.add('on');
+  rerenderCurrent();
+}));
+function rerenderCurrent(){
+  renderPending();updateBadge();refreshAgentList();
+  if(curView==='dash')renderDash();
+  if(curView==='log')renderLog();
+}
+
+/* ---------- process seg ---------- */
+let proc='vetting';
+$('#procSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  $$('#procSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  proc=b.dataset.p;
+  $('#refLabel').textContent = proc==='vetting'?'Reference / load number':'Report ID / license plate / MC#';
+  $('#ref').placeholder = proc==='vetting'?'e.g. M378756':'e.g. CargoNet #, plate, MC';
+});
+
+/* ---------- start / discard ---------- */
+function startSession(){
+  if(active){toast('A session is already running — end it first');return}
+  const agent=$('#agent').value.trim(), ref=$('#ref').value.trim();
+  if(!agent){toast('Enter agent name / ID');$('#agent').focus();return}
+  if(!ref){toast('Enter the reference number');$('#ref').focus();return}
+  active={id:Date.now()+'-'+Math.random().toString(36).slice(2,7), agent, proc, ref:ref.toUpperCase(), start:Date.now()};
+  persistActive();$('#ref').value='';renderActive();toast('Session started — '+active.ref);
+}
+$('#btnStart').addEventListener('click',startSession);
+$('#ref').addEventListener('keydown',e=>{if(e.key==='Enter')startSession()});
+$('#btnDiscard').addEventListener('click',()=>{
+  if(!active)return;
+  if(!confirm('Discard this session without saving? ('+active.ref+')'))return;
+  active=null;persistActive();renderActive();toast('Session discarded');
+});
+
+function renderActive(){
+  const w=$('#timerWrap');
+  if(!active){
+    w.classList.add('idle');$('#timerLive').style.display='none';$('#timerIdle').style.display='block';
+    if(tick){clearInterval(tick);tick=null}
+    return;
+  }
+  w.classList.remove('idle');$('#timerLive').style.display='block';$('#timerIdle').style.display='none';
+  $('#tRef').textContent=active.ref;$('#tAgent').textContent=active.agent;
+  $('#tProc').textContent=PROC_LABEL[active.proc];$('#tStart').textContent=fmtTime(active.start);
+  const upd=()=>{
+    const el=(Date.now()-active.start)/1000, n=$('#timerNum'), tg=TARGETS[active.proc];
+    n.textContent=fmtDur(el);
+    n.classList.toggle('warn',el>tg&&el<=tg*1.5);
+    n.classList.toggle('over',el>tg*1.5);
+  };
+  upd();if(tick)clearInterval(tick);tick=setInterval(upd,1000);
+}
+
+/* ---------- end -> modal ---------- */
+$('#btnEnd').addEventListener('click',()=>{
+  if(!active)return;
+  selOutcome=null;$$('.outc').forEach(o=>o.classList.remove('on'));
+  $('#mNotes').value='';$('#mSave').disabled=true;
+  $('#mRef').textContent=active.ref+' · '+active.agent;
+  $('#mTime').textContent=fmtDur((Date.now()-active.start)/1000);
+  $('#endOverlay').classList.add('on');
+});
+$('#outcomes').addEventListener('click',e=>{
+  const b=e.target.closest('.outc');if(!b)return;
+  $$('.outc').forEach(o=>o.classList.remove('on'));b.classList.add('on');
+  selOutcome=b.dataset.o;$('#mSave').disabled=false;
+});
+$('#mCancel').addEventListener('click',()=>$('#endOverlay').classList.remove('on'));
+$('#mSave').addEventListener('click',async ()=>{
+  if(!active||!selOutcome)return;
+  const end=Date.now();
+  const rec={id:active.id, agent:active.agent, proc:active.proc, ref:active.ref,
+    start:active.start, end, handleSec:Math.round((end-active.start)/1000),
+    outcome:selOutcome, notes:$('#mNotes').value.trim(),
+    approvalEnd:null, approvalWaitSec:null, updatedAt:end};
+  const label=rec.ref, dur=fmtDur(rec.handleSec), wasSent=selOutcome==='sent_approval';
+  active=null;persistActive();
+  $('#endOverlay').classList.remove('on');renderActive();
+  // Firestore write — resolves when the local cache accepts it (works offline too)
+  saveRec(rec);
+  toast('Saved — '+label+' · '+dur+(wasSent?' · now tracking approval wait':''));
+});
+
+async function saveRec(rec){
+  if(!CONFIGURED||!ready){toast('Local mode — configure the database to sync');return}
+  try{ await setDoc(doc(colRef,rec.id),rec); }
+  catch(e){ toast('Save error — will retry when online'); }
+}
+
+/* ---------- pending approvals (team-wide) ---------- */
+function pendingList(){return sessions.filter(s=>s.outcome==='sent_approval'&&!s.approvalEnd).sort((a,b)=>a.end-b.end)}
+function renderPending(){
+  const list=pendingList(), el=$('#pendList');
+  if(!list.length){el.innerHTML='<div class="empty">No cases awaiting approval.</div>';return}
+  el.innerHTML=list.map(s=>`
+    <div class="pend">
+      <div>
+        <div class="ref">${esc(s.ref)}</div>
+        <div class="meta">${esc(s.agent)} · vetting done ${fmtTime(s.end)} · handle ${fmtDur(s.handleSec)}</div>
+      </div>
+      <div class="wait"><span data-wait="${s.id}">${fmtDur((Date.now()-s.end)/1000)}</span><small>waiting</small></div>
+      <button class="btn btn-amber btn-sm" data-appr="${s.id}">Approval received</button>
+    </div>`).join('');
+}
+setInterval(()=>{pendingList().forEach(s=>{const el=document.querySelector(`[data-wait="${s.id}"]`);if(el)el.textContent=fmtDur((Date.now()-s.end)/1000)})},1000);
+$('#pendList').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-appr]');if(!b)return;
+  const s=sessions.find(x=>x.id===b.dataset.appr);if(!s)return;
+  const now=Date.now();
+  const wait=Math.round((now-s.end)/1000);
+  toast('Approval logged — '+s.ref+' waited '+fmtDur(wait));
+  if(CONFIGURED&&ready){
+    try{ await updateDoc(doc(colRef,s.id),{approvalEnd:now,approvalWaitSec:wait,updatedAt:now}); }
+    catch(err){ toast('Update error — will retry when online'); }
+  }
+});
+
+/* ---------- agent list / badge ---------- */
+function agents(){return [...new Set(sessions.map(s=>s.agent))].sort()}
+function refreshAgentList(){
+  $('#agentList').innerHTML=agents().map(a=>`<option value="${esc(a)}">`).join('');
+  const f=$('#fAgent'),cur=f.value;
+  f.innerHTML='<option value="">All agents</option>'+agents().map(a=>`<option ${a===cur?'selected':''}>${esc(a)}</option>`).join('');
+}
+function updateBadge(){
+  const n=sessions.length, b=$('#logCount');b.textContent=n;b.classList.toggle('zero',!n);
+}
+
+/* ---------- dashboard ---------- */
+function inRange(s){
+  const r=$('#dashRange').value;
+  if(r==='all')return true;
+  if(r==='today'){const d=new Date();d.setHours(0,0,0,0);return s.start>=d.getTime()}
+  return s.start>=Date.now()-parseInt(r)*86400000;
+}
+function avg(a){return a.length?a.reduce((x,y)=>x+y,0)/a.length:null}
+function renderDash(){
+  const data=sessions.filter(inRange);
+  const vet=data.filter(s=>s.proc==='vetting'), car=data.filter(s=>s.proc==='cargonet');
+  const sent=data.filter(s=>s.outcome==='sent_approval');
+  const waits=sent.filter(s=>s.approvalWaitSec!=null).map(s=>s.approvalWaitSec);
+  const kp=[
+    {c:'b',l:'Sessions',v:data.length,s:vet.length+' vetting · '+car.length+' cargonet'},
+    {c:'a',l:'Vetting AHT',v:fmtMin(avg(vet.map(s=>s.handleSec))),s:'target 20.0m'},
+    {c:'d',l:'CargoNet AHT',v:fmtMin(avg(car.map(s=>s.handleSec))),s:'target 10.0m'},
+    {c:'c',l:'Sent for Approval',v:sent.length,s:pendingList().length+' still waiting'},
+    {c:'e',l:'Avg Approval Wait',v:fmtMin(avg(waits)),s:'excluded from AHT'}
+  ];
+  $('#kpis').innerHTML=kp.map(k=>`<div class="kpi ${k.c}"><div class="l">${k.l}</div><div class="v">${k.v}</div><div class="s">${k.s}</div></div>`).join('');
+
+  const byA={};data.forEach(s=>{(byA[s.agent]=byA[s.agent]||[]).push(s)});
+  const names=Object.keys(byA).sort();
+  const barData=names.map(n=>{
+    const v=byA[n].filter(s=>s.proc==='vetting').map(s=>s.handleSec);
+    return {n, aht:avg(v)};
+  }).filter(x=>x.aht!=null);
+  if(barData.length){
+    const mx=Math.max(...barData.map(x=>x.aht),TARGETS.vetting*1.2);
+    $('#agentBars').innerHTML=barData.map(x=>`
+      <div class="bar-row">
+        <div class="nm">${esc(x.n)}</div>
+        <div class="bar-track"><div class="bar-fill ${x.aht>TARGETS.vetting?'over':''}" style="width:${(x.aht/mx*100).toFixed(1)}%"></div></div>
+        <div class="bar-val ${x.aht>TARGETS.vetting?'aht-flag':''}">${fmtMin(x.aht)}</div>
+      </div>`).join('')+
+      `<div class="target-note">Red = above the 20-minute vetting target → candidates for TL coaching / assistance.</div>`;
+  }else $('#agentBars').innerHTML='<div class="empty">No completed sessions yet.</div>';
+
+  const tb=$('#agentTable tbody');
+  tb.innerHTML=names.map(n=>{
+    const A=byA[n], v=A.filter(s=>s.proc==='vetting').map(s=>s.handleSec), c=A.filter(s=>s.proc==='cargonet').map(s=>s.handleSec);
+    const all=A.map(s=>s.handleSec), sa=A.filter(s=>s.outcome==='sent_approval');
+    const w=sa.filter(s=>s.approvalWaitSec!=null).map(s=>s.approvalWaitSec);
+    const vAht=avg(v);
+    return `<tr>
+      <td>${esc(n)}</td><td class="mono">${A.length}</td>
+      <td class="mono ${vAht!=null&&vAht>TARGETS.vetting?'aht-flag':''}">${fmtMin(vAht)}</td>
+      <td class="mono">${fmtMin(avg(c))}</td>
+      <td class="mono">${fmtMin(Math.min(...all))}</td>
+      <td class="mono">${fmtMin(Math.max(...all))}</td>
+      <td class="mono">${sa.length}</td>
+      <td class="mono">${fmtMin(avg(w))}</td>
+    </tr>`;
+  }).join('');
+  $('#agentTableEmpty').style.display=names.length?'none':'block';
+}
+$('#dashRange').addEventListener('change',renderDash);
+
+/* ---------- log ---------- */
+function renderLog(){
+  refreshAgentList();
+  const fa=$('#fAgent').value, fp=$('#fProc').value, fo=$('#fOut').value;
+  const data=sessions.filter(s=>(!fa||s.agent===fa)&&(!fp||s.proc===fp)&&(!fo||s.outcome===fo)).sort((a,b)=>b.start-a.start);
+  const tb=$('#logTable tbody');
+  tb.innerHTML=data.map(s=>`<tr>
+    <td class="mono">${fmtDate(s.start)}</td>
+    <td>${esc(s.agent)}</td>
+    <td><span class="pill ${s.proc==='vetting'?'vet':'cargo'}">${PROC_LABEL[s.proc]}</span></td>
+    <td class="mono">${esc(s.ref)}</td>
+    <td class="mono">${fmtTime(s.start)}</td>
+    <td class="mono">${fmtTime(s.end)}</td>
+    <td class="mono">${fmtDur(s.handleSec)}</td>
+    <td><span class="pill ${OUT_CLASS[s.outcome]}">${OUT_LABEL[s.outcome]}</span></td>
+    <td class="mono">${s.outcome==='sent_approval'?(s.approvalWaitSec!=null?fmtDur(s.approvalWaitSec):'<span style="color:var(--amber)">waiting…</span>'):'—'}</td>
+    <td style="max-width:220px;font-size:12px;color:var(--dim)">${esc(s.notes||'')}</td>
+    <td><span class="link-danger" data-del="${s.id}" title="Delete">✕</span></td>
+  </tr>`).join('');
+  $('#logEmpty').style.display=data.length?'none':'block';
+}
+['fAgent','fProc','fOut'].forEach(id=>$('#'+id).addEventListener('change',renderLog));
+$('#logTable').addEventListener('click',async e=>{
+  const d=e.target.closest('[data-del]');if(!d)return;
+  if(!confirm('Delete this session record from the team database?'))return;
+  if(CONFIGURED&&ready){
+    try{ await deleteDoc(doc(colRef,d.dataset.del)); }
+    catch(err){ toast('Delete error — will retry when online'); }
+  }
+});
+
+/* ---------- CSV ---------- */
+$('#btnCSV').addEventListener('click',()=>{
+  if(!sessions.length){toast('Nothing to export yet');return}
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const rows=[['Date','Agent','Process','Reference','Start','End','Handle Time (min)','Outcome','Approval Wait (min)','Total Incl. Approval (min)','Notes']];
+  sessions.slice().sort((a,b)=>a.start-b.start).forEach(s=>{
+    const d=new Date(s.start);
+    rows.push([
+      d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
+      s.agent, PROC_LABEL[s.proc], s.ref, fmtTime(s.start), fmtTime(s.end),
+      (s.handleSec/60).toFixed(2), OUT_LABEL[s.outcome],
+      s.approvalWaitSec!=null?(s.approvalWaitSec/60).toFixed(2):'',
+      ((s.handleSec+(s.approvalWaitSec||0))/60).toFixed(2),
+      s.notes||''
+    ]);
+  });
+  const csv=rows.map(r=>r.map(q).join(',')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'}));
+  const d=new Date();
+  a.download=`DRM_TimeMotion_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.csv`;
+  a.click();URL.revokeObjectURL(a.href);toast('CSV exported');
+});
+
+$('#btnSignout').addEventListener('click',async ()=>{
+  if(!confirm('Sign out this device? The team database is not affected; the app will re-sign in automatically on reload.'))return;
+  try{ if(db) await signOut(getAuth()); }catch(e){}
+  location.reload();
+});
+
+/* ---------- boot Firebase ---------- */
+function boot(){
+  renderActive();rerenderCurrent();
+  if(active)toast('Resumed active session — '+active.ref);
+
+  if(!CONFIGURED){ setDb('local'); return; }
+  try{
+    const app=initializeApp(firebaseConfig);
+    db=initializeFirestore(app,{
+      localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})
+    });
+    colRef=collection(db,COLLECTION);
+    const auth=getAuth(app);
+    setDb('sync');
+    onAuthStateChanged(auth,user=>{
+      if(user){
+        ready=true;
+        subscribe();
+      }
+    });
+    signInAnonymously(auth).catch(()=>{ setDb('off'); toast('Could not connect to the database'); });
+  }catch(e){ setDb('off'); toast('Database init failed — check configuration'); }
+
+  window.addEventListener('online',()=>setDb('sync'));
+  window.addEventListener('offline',()=>setDb('off'));
+}
+
+function subscribe(){
+  // Real-time listener — fires on every local or remote change, and includes cache metadata
+  onSnapshot(colRef,{includeMetadataChanges:true},snap=>{
+    sessions=snap.docs.map(d=>d.data());
+    let pending=0;
+    snap.docs.forEach(d=>{ if(d.metadata.hasPendingWrites) pending++; });
+    if(snap.metadata.fromCache && !navigator.onLine) setDb('off',pending);
+    else setDb(pending?'sync':'ok',pending);
+    rerenderCurrent();
+  },err=>{ setDb('off'); });
+}
+
+boot();
+</script>
+</body>
+</html>
